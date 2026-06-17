@@ -1,0 +1,114 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --radius: 0.625rem;
+
+  /* EduCoach AI theme — deep indigo (focus/trust) + warm amber (progress/encouragement) */
+  --background: #fafaf9;
+  --foreground: #1c1d2b;
+
+  --card: #ffffff;
+  --card-foreground: #1c1d2b;
+
+  --popover: #ffffff;
+  --popover-foreground: #1c1d2b;
+
+  --primary: #3730a3;
+  --primary-foreground: #f8f7ff;
+
+  --secondary: #fef3c7;
+  --secondary-foreground: #78350f;
+
+  --muted: #f1f0fb;
+  --muted-foreground: #64637e;
+
+  --accent: #fbbf24;
+  --accent-foreground: #1c1d2b;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #fef2f2;
+
+  --success: #16a34a;
+  --success-foreground: #f0fdf4;
+
+  --border: #e4e2f5;
+  --input: #e4e2f5;
+  --ring: #3730a3;
+}
+
+.dark {
+  --background: #14141f;
+  --foreground: #f1f0fb;
+
+  --card: #1c1d2b;
+  --card-foreground: #f1f0fb;
+
+  --popover: #1c1d2b;
+  --popover-foreground: #f1f0fb;
+
+  --primary: #818cf8;
+  --primary-foreground: #14141f;
+
+  --secondary: #422006;
+  --secondary-foreground: #fef3c7;
+
+  --muted: #232336;
+  --muted-foreground: #a3a1c2;
+
+  --accent: #fbbf24;
+  --accent-foreground: #14141f;
+
+  --destructive: #f87171;
+  --destructive-foreground: #14141f;
+
+  --success: #4ade80;
+  --success-foreground: #14141f;
+
+  --border: #2b2b40;
+  --input: #2b2b40;
+  --ring: #818cf8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
