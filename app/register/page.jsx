@@ -22,8 +22,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-
-const GRADES = ["6th", "7th", "8th", "9th", "10th", "11th", "12th"];
+import { GRADES } from "@/lib/constants";  
 
 export default function RegisterPage() {
   const router = useRouter();

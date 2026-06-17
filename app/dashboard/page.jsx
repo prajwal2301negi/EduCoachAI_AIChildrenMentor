@@ -15,6 +15,9 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import SubjectAccuracyChart from "@/components/SubjectAccuracyChart";
+import WeeklyScoreTrendChart from "@/components/WeeklyScoreTrendChart";
+import ReportCard from "@/components/ReportCard";
 
 export default function DashboardPage() {
   return (
@@ -38,26 +41,70 @@ function DashboardBody() {
 function StudentDashboard() {
   const [progress, setProgress] = useState(null);
   const [history, setHistory] = useState([]);
+  const [reports, setReports] = useState([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+
+  const loadAll = async () => {
+    try {
+      const [progressRes, historyRes, reportsRes] = await Promise.all([
+        api.getMyProgress(),
+        api.getQuizHistory(),
+        api.getMyReports(),
+      ]);
+      setProgress(progressRes.data);
+      setHistory(historyRes.data);
+      setReports(reportsRes.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
+    let isMounted = true;
+
     const load = async () => {
       try {
-        const [progressRes, historyRes] = await Promise.all([
+        const [progressRes, historyRes, reportsRes] = await Promise.all([
           api.getMyProgress(),
           api.getQuizHistory(),
+          api.getMyReports(),
         ]);
-        setProgress(progressRes.data);
-        setHistory(historyRes.data);
+        if (isMounted) {
+          setProgress(progressRes.data);
+          setHistory(historyRes.data);
+          setReports(reportsRes.data);
+        }
       } catch (err) {
-        setError(err.message);
+        if (isMounted) setError(err.message);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+
     load();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  const handleGenerateReport = async () => {
+    setGenerating(true);
+    setError("");
+    try {
+      await api.generateMyReportNow();
+      const reportsRes = await api.getMyReports();
+      setReports(reportsRes.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   return (
     <div className="mt-6 flex flex-col gap-6">
@@ -68,7 +115,9 @@ function StudentDashboard() {
       <Card>
         <CardHeader>
           <CardTitle>Start a practice quiz</CardTitle>
-          <CardDescription>Pick a subject and topic, get instant feedback.</CardDescription>
+          <CardDescription>
+            Pick a subject and topic — up to 20 exam-style questions, generated for your grade.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Button asChild>
@@ -83,34 +132,49 @@ function StudentDashboard() {
       {progress && (
         <Card>
           <CardHeader>
-            <CardTitle>Topics to focus on</CardTitle>
+            <CardTitle>Accuracy by subject &amp; topic</CardTitle>
             <CardDescription>
-              Topics below 60% accuracy — a little more practice here goes a long way.
+              Anything under 60% is flagged as a topic to focus on.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {progress.weakTopics.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No weak topics yet — take a few quizzes to see your personalized list.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {progress.weakTopics.map((t) => (
-                  <li
-                    key={t._id}
-                    className="flex items-center justify-between rounded-md border border-border px-3 py-2"
-                  >
-                    <span className="text-sm font-medium">
-                      {t.subject} — {t.topic}
-                    </span>
-                    <Badge variant="destructive">{t.accuracy}% accuracy</Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <SubjectAccuracyChart data={progress.allProgress} />
           </CardContent>
         </Card>
       )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Score trend</CardTitle>
+          <CardDescription>Your average quiz score, week over week.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <WeeklyScoreTrendChart reports={reports} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3">
+          <div>
+            <CardTitle>Weekly reports</CardTitle>
+            <CardDescription>
+              Auto-generated every Sunday. Your parent can see these too, if linked.
+            </CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={handleGenerateReport} disabled={generating}>
+            {generating ? "Generating..." : "Generate now"}
+          </Button>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          {reports.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No reports yet — take a few quizzes, then generate your first one.
+            </p>
+          ) : (
+            reports.map((r) => <ReportCard key={r._id} report={r} />)
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -150,6 +214,7 @@ function ParentDashboard() {
   const [children, setChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
   const [childProgress, setChildProgress] = useState(null);
+  const [childReports, setChildReports] = useState([]);
   const [linkEmail, setLinkEmail] = useState("");
   const [error, setError] = useState("");
   const [linkError, setLinkError] = useState("");
@@ -168,7 +233,24 @@ function ParentDashboard() {
   };
 
   useEffect(() => {
-    loadChildren();
+    let isMounted = true;
+
+    const load = async () => {
+      try {
+        const res = await api.getMyChildren();
+        if (isMounted) setChildren(res.data);
+      } catch (err) {
+        if (isMounted) setError(err.message);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleLink = async (e) => {
@@ -187,9 +269,14 @@ function ParentDashboard() {
 
   const viewChildProgress = async (childId) => {
     setSelectedChild(childId);
+    setError("");
     try {
-      const res = await api.getChildProgress(childId);
-      setChildProgress(res.data);
+      const [progressRes, reportsRes] = await Promise.all([
+        api.getChildProgress(childId),
+        api.getChildReports(childId),
+      ]);
+      setChildProgress(progressRes.data);
+      setChildReports(reportsRes.data);
     } catch (err) {
       setError(err.message);
     }
@@ -261,33 +348,46 @@ function ParentDashboard() {
       </Card>
 
       {selectedChild && childProgress && (
-        <Card>
-          <CardHeader>
-            <CardTitle>{childProgress.student.name}&apos;s weak topics</CardTitle>
-            <CardDescription>Topics below 60% accuracy</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {childProgress.weakTopics.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No weak topics yet — encourage them to take a few quizzes!
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {childProgress.weakTopics.map((t) => (
-                  <li
-                    key={t._id}
-                    className="flex items-center justify-between rounded-md border border-border px-3 py-2"
-                  >
-                    <span className="text-sm font-medium">
-                      {t.subject} — {t.topic}
-                    </span>
-                    <Badge variant="destructive">{t.accuracy}% accuracy</Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>{childProgress.student.name}&apos;s accuracy by topic</CardTitle>
+              <CardDescription>Anything under 60% needs more practice.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SubjectAccuracyChart data={childProgress.allProgress} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Score trend</CardTitle>
+              <CardDescription>Average quiz score, week over week.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WeeklyScoreTrendChart reports={childReports} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Weekly reports</CardTitle>
+              <CardDescription>
+                Generated automatically every Sunday based on quiz activity.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              {childReports.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No reports yet for this child — they&apos;ll appear here once quizzes are
+                  taken and the weekly report runs.
+                </p>
+              ) : (
+                childReports.map((r) => <ReportCard key={r._id} report={r} />)
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   );

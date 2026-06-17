@@ -17,6 +17,14 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { SUBJECTS } from "@/lib/constants";
 
 export default function QuizPage() {
   return (
@@ -33,7 +41,12 @@ function QuizFlow() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ subject: "Math", topic: "Fractions", numQuestions: 5 });
+  const [form, setForm] = useState({
+    subject: SUBJECTS[0],
+    topic: "",
+    numQuestions: 10,
+    difficulty: "medium",
+  });
   const router = useRouter();
 
   const handleStart = async (e) => {
@@ -60,10 +73,12 @@ function QuizFlow() {
     setError("");
     setLoading(true);
     try {
-      const payload = Object.entries(answers).map(([questionId, selectedAnswerIndex]) => ({
-        questionId,
-        selectedAnswerIndex,
-      }));
+      const payload = Object.entries(answers).map(
+        ([questionId, selectedAnswerIndex]) => ({
+          questionId,
+          selectedAnswerIndex,
+        }),
+      );
       const res = await api.submitQuiz(quiz._id, payload);
       setResult(res.data);
     } catch (err) {
@@ -85,17 +100,21 @@ function QuizFlow() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col items-center gap-3 py-6">
-            <span className="text-5xl font-bold text-primary">{result.score}%</span>
+            <span className="text-5xl font-bold text-primary">
+              {result.score}%
+            </span>
             <p className="text-muted-foreground text-sm">
               {result.score >= 80
                 ? "Excellent work!"
                 : result.score >= 60
-                ? "Good progress — keep practicing."
-                : "This topic needs more practice. You've got this."}
+                  ? "Good progress — keep practicing."
+                  : "This topic needs more practice. You've got this."}
             </p>
           </CardContent>
           <CardFooter className="flex gap-2">
-            <Button onClick={() => router.push("/dashboard")}>Back to dashboard</Button>
+            <Button onClick={() => router.push("/dashboard")}>
+              Back to dashboard
+            </Button>
             <Button
               variant="outline"
               onClick={() => {
@@ -113,7 +132,9 @@ function QuizFlow() {
 
   // ---- Active quiz view ----
   if (quiz) {
-    const allAnswered = quiz.questions.every((q) => answers[q.question._id] !== undefined);
+    const allAnswered = quiz.questions.every(
+      (q) => answers[q.question._id] !== undefined,
+    );
 
     return (
       <main className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full">
@@ -131,7 +152,13 @@ function QuizFlow() {
                 <CardTitle className="text-base">
                   {idx + 1}. {q.question.questionText}
                 </CardTitle>
+                {q.question.examRelevance && (
+                  <CardDescription className="text-xs">
+                    📌 {q.question.examRelevance}
+                  </CardDescription>
+                )}
               </CardHeader>
+
               <CardContent className="flex flex-col gap-2">
                 {q.question.options.map((opt, optIdx) => (
                   <button
@@ -169,19 +196,30 @@ function QuizFlow() {
       <Card>
         <CardHeader>
           <CardTitle>Start a quiz</CardTitle>
-          <CardDescription>Choose a subject and topic to practice.</CardDescription>
+          <CardDescription>
+            Choose a subject and topic to practice.
+          </CardDescription>
         </CardHeader>
         <form onSubmit={handleStart}>
+
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
+              <Label>Subject</Label>
+              <Select
                 value={form.subject}
-                onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
-                placeholder="e.g. Math"
-                required
-              />
+                onValueChange={(value) => setForm((f) => ({ ...f, subject: value }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select subject" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUBJECTS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="topic">Topic</Label>
@@ -189,12 +227,28 @@ function QuizFlow() {
                 id="topic"
                 value={form.topic}
                 onChange={(e) => setForm((f) => ({ ...f, topic: e.target.value }))}
-                placeholder="e.g. Fractions"
+                placeholder="e.g. Fractions, French Revolution, Photosynthesis"
                 required
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="numQuestions">Number of questions</Label>
+              <Label>Difficulty</Label>
+              <Select
+                value={form.difficulty}
+                onValueChange={(value) => setForm((f) => ({ ...f, difficulty: value }))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select difficulty" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="easy">Easy</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="hard">Hard</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="numQuestions">Number of questions (up to 20)</Label>
               <Input
                 id="numQuestions"
                 type="number"
@@ -202,7 +256,10 @@ function QuizFlow() {
                 max={20}
                 value={form.numQuestions}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, numQuestions: Number(e.target.value) }))
+                  setForm((f) => ({
+                    ...f,
+                    numQuestions: Math.min(Number(e.target.value) || 1, 20),
+                  }))
                 }
               />
             </div>
@@ -210,14 +267,14 @@ function QuizFlow() {
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Loading questions..." : "Start quiz"}
+              {loading ? "Generating exam-style questions..." : "Start quiz"}
             </Button>
           </CardFooter>
         </form>
       </Card>
       <p className="text-xs text-muted-foreground mt-3 text-center">
-        Tip: try Subject &quot;Math&quot;, Topic &quot;Fractions&quot; — sample questions are
-        pre-seeded for this combo.
+        First time on a new topic, our AI tutor writes fresh exam-style questions for
+        you — it may take a few seconds. After that, they&apos;re saved for next time.
       </p>
     </main>
   );
