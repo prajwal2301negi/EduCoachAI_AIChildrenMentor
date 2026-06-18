@@ -117,11 +117,15 @@ function StudentDashboard() {
           <CardTitle>Start a practice quiz</CardTitle>
           <CardDescription>
             Pick a subject and topic — up to 20 exam-style questions, generated for your grade.
+            Requires an active subscription.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex gap-2">
           <Button asChild>
             <Link href="/quiz">Start a new quiz</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href="/subscribe">View plans</Link>
           </Button>
         </CardContent>
       </Card>
